@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { app } from '/home/runner/work/Sutra/Sutra/tests/setup.ts';
+import { app } from './setup.ts';
 
 async function graphqlRequest(query: string, variables?: Record<string, unknown>, token?: string) {
   const response = await app.inject({

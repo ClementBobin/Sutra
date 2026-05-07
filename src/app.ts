@@ -1,5 +1,6 @@
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import mercurius, { type IResolvers } from 'mercurius';
+import rateLimit from '@fastify/rate-limit';
 import { config } from './config.js';
 import prismaPlugin from './plugins/prisma.plugin.js';
 import authPlugin from './plugins/auth.plugin.js';
@@ -23,6 +24,11 @@ export async function buildApp() {
 
   await app.register(prismaPlugin);
   await app.register(authPlugin);
+  await app.register(rateLimit, {
+    global: true,
+    max: 100,
+    timeWindow: '1 minute'
+  });
 
   await app.register(mercurius, {
     schema,

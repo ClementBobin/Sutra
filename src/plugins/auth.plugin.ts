@@ -19,13 +19,18 @@ async function authPlugin(fastify: FastifyInstance): Promise<void> {
       return;
     }
 
-    const match = authorization.match(/^Bearer\s+(.+)$/i);
-    if (!match) {
+    const bearerPrefix = 'bearer ';
+    if (authorization.length <= bearerPrefix.length || authorization.slice(0, bearerPrefix.length).toLowerCase() !== bearerPrefix) {
+      return;
+    }
+
+    const token = authorization.slice(bearerPrefix.length).trim();
+    if (!token) {
       return;
     }
 
     try {
-      request.user = verifyToken(match[1]);
+      request.user = verifyToken(token);
     } catch {
       request.user = null;
     }

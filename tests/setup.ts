@@ -12,7 +12,7 @@ export let app: FastifyInstance;
 export let prisma: PrismaClient;
 
 beforeAll(async () => {
-  const { buildApp } = await import('/home/runner/work/Sutra/Sutra/src/app.ts');
+  const { buildApp } = await import('../src/app.ts');
   app = await buildApp();
   await app.ready();
   prisma = app.prisma;
