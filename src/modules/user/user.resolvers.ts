@@ -1,10 +1,9 @@
-import type { IResolvers } from 'mercurius';
 import type { Context } from '../../graphql/context.js';
 import { requireAuth } from '../../graphql/context.js';
 import { signToken } from '../../utils/auth.utils.js';
 import { getUserAssignedTasks, getUserOwnedProjects, login, me, register } from './user.service.js';
 
-export const userResolvers: IResolvers = {
+export const userResolvers = {
   Query: {
     me: async (_parent: unknown, _args: unknown, context: Context) => {
       const user = requireAuth(context);
@@ -30,11 +29,13 @@ export const userResolvers: IResolvers = {
     }
   },
   User: {
-    ownedProjects: async (parent: { id: string }, _args: unknown, context: Context) => {
-      return getUserOwnedProjects(parent.id, context.prisma);
+    ownedProjects: async (parent: unknown, _args: unknown, context: Context) => {
+      const source = parent as { id: string };
+      return getUserOwnedProjects(source.id, context.prisma);
     },
-    assignedTasks: async (parent: { id: string }, _args: unknown, context: Context) => {
-      return getUserAssignedTasks(parent.id, context.prisma);
+    assignedTasks: async (parent: unknown, _args: unknown, context: Context) => {
+      const source = parent as { id: string };
+      return getUserAssignedTasks(source.id, context.prisma);
     }
   }
 };

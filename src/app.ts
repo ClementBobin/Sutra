@@ -1,5 +1,5 @@
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
-import mercurius from 'mercurius';
+import mercurius, { type IResolvers } from 'mercurius';
 import { config } from './config.js';
 import prismaPlugin from './plugins/prisma.plugin.js';
 import authPlugin from './plugins/auth.plugin.js';
@@ -26,7 +26,7 @@ export async function buildApp() {
 
   await app.register(mercurius, {
     schema,
-    resolvers,
+    resolvers: resolvers as IResolvers,
     context: (request: FastifyRequest): Context => ({
       prisma: app.prisma,
       user: request.user

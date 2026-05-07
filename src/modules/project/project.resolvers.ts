@@ -1,10 +1,9 @@
-import type { IResolvers } from 'mercurius';
 import type { Context } from '../../graphql/context.js';
 import { requireAuth } from '../../graphql/context.js';
 import { getTasks } from '../task/task.service.js';
 import { createProject, deleteProject, getProject, getProjectOwner, getProjects, updateProject } from './project.service.js';
 
-export const projectResolvers: IResolvers = {
+export const projectResolvers = {
   Query: {
     projects: async (
       _parent: unknown,
@@ -36,11 +35,13 @@ export const projectResolvers: IResolvers = {
     }
   },
   Project: {
-    owner: async (parent: { id: string }, _args: unknown, context: Context) => {
-      return getProjectOwner(parent.id, context.prisma);
+    owner: async (parent: unknown, _args: unknown, context: Context) => {
+      const source = parent as { id: string };
+      return getProjectOwner(source.id, context.prisma);
     },
-    tasks: async (parent: { id: string }, _args: unknown, context: Context) => {
-      return getTasks({ projectId: parent.id }, {}, context.prisma);
+    tasks: async (parent: unknown, _args: unknown, context: Context) => {
+      const source = parent as { id: string };
+      return getTasks({ projectId: source.id }, {}, context.prisma);
     }
   }
 };
