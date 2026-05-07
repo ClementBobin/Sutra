@@ -12,11 +12,15 @@ model User {
   name      String
   email     String   @unique
   password  String
+  role      UserRole @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ownedProjects Project[] @relation("ProjectOwner")
-  assignedTasks Task[]    @relation("TaskAssignee")
+  ownedProjects   Project[]      @relation("ProjectOwner")
+  assignedTasks   Task[]         @relation("TaskAssignee")
+  createdTokens   ApiToken[]     @relation("TokenOwner")
+  tokenShares     TokenShare[]
+  webviewAccesses WebviewAccess[]
 }
 
 model Project {
@@ -46,6 +50,54 @@ model Task {
   assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
 }
 
+model ApiToken {
+  id          String       @id @default(cuid())
+  appId       String
+  name        String
+  description String?
+  tokenHash   String       @unique
+  tokenPrefix String
+  scopes      TokenScope[]
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  disabled    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  ownerId String
+  owner   User         @relation("TokenOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  shares  TokenShare[]
+}
+
+model TokenShare {
+  id          String           @id @default(cuid())
+  accessLevel ShareAccessLevel @default(VIEWER)
+  disabled    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  tokenId String
+  token   ApiToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenId, userId])
+}
+
+model WebviewAccess {
+  id          String             @id @default(cuid())
+  level       WebviewAccessLevel @default(VIEWER)
+  enabled     Boolean            @default(true)
+  grantedById String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+}
+
 enum TaskStatus {
   TODO
   IN_PROGRESS
@@ -56,4 +108,27 @@ enum Priority {
   LOW
   MEDIUM
   HIGH
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum TokenScope {
+  API_READ
+  API_WRITE
+  API_ADMIN
+}
+
+enum ShareAccessLevel {
+  VIEWER
+  EDITOR
+  MANAGER
+}
+
+enum WebviewAccessLevel {
+  VIEWER
+  EDITOR
+  ADMIN
 }

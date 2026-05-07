@@ -1,10 +1,12 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { verifyToken, type TokenPayload } from '../utils/auth.utils.js';
+import { verifyToken, hashApiToken } from '../utils/auth.utils.js';
+import type { TokenScope, UserRole } from '@prisma/client';
 
 declare module 'fastify' {
   interface FastifyRequest {
-    user: TokenPayload | null;
+    user: { id: string; email: string; role: UserRole } | null;
+    tokenAuth: { tokenId: string; scopes: TokenScope[] } | null;
   }
 }
 
@@ -29,11 +31,42 @@ function consumeAuthCheck(ip: string): boolean {
   return true;
 }
 
+async function tryAuthenticateApiToken(request: FastifyRequest, token: string): Promise<boolean> {
+  const tokenHash = hashApiToken(token);
+  const foundToken = await request.server.prisma.apiToken.findUnique({
+    where: { tokenHash },
+    include: { owner: true }
+  });
+
+  if (!foundToken || !foundToken.owner) {
+    return false;
+  }
+
+  const now = new Date();
+  if (foundToken.disabled || foundToken.revokedAt !== null || (foundToken.expiresAt !== null && foundToken.expiresAt <= now)) {
+    return false;
+  }
+
+  request.user = {
+    id: foundToken.owner.id,
+    email: foundToken.owner.email,
+    role: foundToken.owner.role
+  };
+  request.tokenAuth = {
+    tokenId: foundToken.id,
+    scopes: foundToken.scopes
+  };
+
+  return true;
+}
+
 async function authPlugin(fastify: FastifyInstance): Promise<void> {
   fastify.decorateRequest('user', null);
+  fastify.decorateRequest('tokenAuth', null);
 
   fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     request.user = null;
+    request.tokenAuth = null;
     const authorization = request.headers.authorization;
 
     if (!authorization) {
@@ -64,9 +97,26 @@ async function authPlugin(fastify: FastifyInstance): Promise<void> {
     }
 
     try {
-      request.user = verifyToken(token);
+      const jwtPayload = verifyToken(token);
+      const user = await request.server.prisma.user.findUnique({ where: { id: jwtPayload.id } });
+      if (!user) {
+        request.user = null;
+        request.tokenAuth = null;
+        return;
+      }
+
+      request.user = {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      };
+      return;
     } catch {
-      request.user = null;
+      const authenticated = await tryAuthenticateApiToken(request, token);
+      if (!authenticated) {
+        request.user = null;
+        request.tokenAuth = null;
+      }
     }
   });
 }

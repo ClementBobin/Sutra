@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { config } from '../config.js';
 import { AuthenticationError } from './errors.js';
@@ -5,6 +6,12 @@ import { AuthenticationError } from './errors.js';
 export interface TokenPayload {
   id: string;
   email: string;
+}
+
+export interface GeneratedApiToken {
+  rawToken: string;
+  tokenHash: string;
+  tokenPrefix: string;
 }
 
 export function signToken(payload: TokenPayload): string {
@@ -29,4 +36,18 @@ export function verifyToken(token: string): TokenPayload {
   } catch {
     throw new AuthenticationError('Invalid or expired token');
   }
+}
+
+export function hashApiToken(rawToken: string): string {
+  return createHash('sha256').update(rawToken).digest('hex');
+}
+
+export function generateApiToken(): GeneratedApiToken {
+  const rawSecret = randomBytes(32).toString('hex');
+  const rawToken = `sutra_${rawSecret}`;
+  return {
+    rawToken,
+    tokenHash: hashApiToken(rawToken),
+    tokenPrefix: rawToken.slice(0, 12)
+  };
 }
